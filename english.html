@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>영어 학습</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --ink: #1c1917;
+    --muted: #78716c;
+    --card: #fffdf8;
+    --line: #e7e0d4;
+    --accent: #1d4e4a;
+    --accent-2: #c45c26;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  header {
+    padding: 28px 20px 8px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+  p.sub { margin: 6px 0 0; color: var(--muted); }
+  nav {
+    display: flex;
+    gap: 8px;
+    max-width: 720px;
+    margin: 18px auto 0;
+    padding: 0 20px;
+  }
+  nav button {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+  }
+  nav button.on {
+    background: var(--accent);
+    color: #f7f4ee;
+    border-color: var(--accent);
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .panel { display: none; }
+  .panel.on { display: block; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 32px 20px;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(28, 25, 23, 0.04);
+  }
+  .card .word { font-size: 40px; font-weight: 650; letter-spacing: -0.03em; }
+  .card .hint { margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .card .mean { font-size: 28px; margin-top: 8px; }
+  .card .ex { margin-top: 14px; color: var(--muted); line-height: 1.5; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 14px;
+    gap: 8px;
+  }
+  .row button, .choices button, .again {
+    font: inherit;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .row button.primary, .again {
+    background: var(--accent);
+    color: #f7f4ee;
+    border-color: var(--accent);
+  }
+  .progress { color: var(--muted); font-size: 14px; }
+  .q {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 22px;
+  }
+  .q h2 { margin: 0 0 6px; font-size: 20px; }
+  .choices { display: grid; gap: 8px; margin-top: 16px; }
+  .choices button { text-align: left; }
+  .choices button.good { background: #e7f3ee; border-color: #1d4e4a; }
+  .choices button.bad { background: #fde8e4; border-color: #c45c26; }
+  .score { margin-top: 14px; color: var(--muted); }
+  .phrase {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .phrase strong { display: block; font-size: 17px; }
+  .phrase span { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>오늘의 영어</h1>
+  <p class="sub">카드를 뒤집고, 퀴즈를 풀고, 자주 쓰는 표현을 익혀 보세요.</p>
+</header>
+<nav>
+  <button class="on" data-tab="cards">단어 카드</button>
+  <button data-tab="quiz">퀴즈</button>
+  <button data-tab="phrases">표현</button>
+</nav>
+<main>
+  <section id="cards" class="panel on">
+    <div class="card" id="flip" role="button" tabindex="0">
+      <div class="word" id="word"></div>
+      <div class="hint" id="hint">클릭하면 뜻이 보여요</div>
+    </div>
+    <div class="row">
+      <span class="progress" id="cardCount"></span>
+      <div>
+        <button id="prev">이전</button>
+        <button id="next" class="primary">다음</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="quiz" class="panel">
+    <div class="q">
+      <h2 id="question"></h2>
+      <div class="choices" id="choices"></div>
+    </div>
+    <div class="score" id="score"></div>
+    <button class="again" id="restart" hidden>다시 풀기</button>
+  </section>
+
+  <section id="phrases" class="panel">
+    <div id="phraseList"></div>
+  </section>
+</main>
+<script>
+const words = [
+  { en: "appreciate", ko: "감사하다", ex: "I appreciate your help." },
+  { en: "consider", ko: "고려하다", ex: "Please consider my idea." },
+  { en: "improve", ko: "향상시키다", ex: "I want to improve my English." },
+  { en: "suggest", ko: "제안하다", ex: "She suggested a new plan." },
+  { en: "realize", ko: "깨닫다", ex: "I realized I was wrong." },
+  { en: "achieve", ko: "이루다", ex: "He achieved his goal." },
+  { en: "decide", ko: "결정하다", ex: "We decided to stay." },
+  { en: "explain", ko: "설명하다", ex: "Can you explain this word?" }
+];
+
+const phrases = [
+  ["How's it going?", "어떻게 지내?"],
+  ["That makes sense.", "그게 이해가 돼."],
+  ["I'll get back to you.", "다시 연락할게."],
+  ["Could you say that again?", "다시 말해 줄래?"],
+  ["I'm looking forward to it.", "기대하고 있어."],
+  ["Let me think about it.", "생각해 볼게."]
+];
+
+let index = 0;
+let flipped = false;
+const wordEl = document.getElementById("word");
+const hintEl = document.getElementById("hint");
+const countEl = document.getElementById("cardCount");
+
+function showCard() {
+  const item = words[index];
+  flipped = false;
+  wordEl.textContent = item.en;
+  wordEl.className = "word";
+  hintEl.className = "hint";
+  hintEl.textContent = "클릭하면 뜻이 보여요";
+  countEl.textContent = (index + 1) + " / " + words.length;
+}
+
+document.getElementById("flip").onclick = () => {
+  const item = words[index];
+  flipped = !flipped;
+  if (flipped) {
+    wordEl.textContent = item.ko;
+    wordEl.className = "mean";
+    hintEl.className = "ex";
+    hintEl.textContent = item.ex;
+  } else {
+    showCard();
+  }
+};
+
+document.getElementById("next").onclick = () => {
+  index = (index + 1) % words.length;
+  showCard();
+};
+document.getElementById("prev").onclick = () => {
+  index = (index - 1 + words.length) % words.length;
+  showCard();
+};
+
+document.querySelectorAll("nav button").forEach((btn) => {
+  btn.onclick = () => {
+    document.querySelectorAll("nav button").forEach((b) => b.classList.remove("on"));
+    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("on"));
+    btn.classList.add("on");
+    document.getElementById(btn.dataset.tab).classList.add("on");
+  };
+});
+
+let quiz = [];
+let qIndex = 0;
+let correct = 0;
+let locked = false;
+
+function shuffle(list) {
+  return list.map((v) => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map((p) => p[1]);
+}
+
+function buildQuiz() {
+  quiz = shuffle(words).map((item) => {
+    const wrong = shuffle(words.filter((w) => w.en !== item.en)).slice(0, 3);
+    return { item, options: shuffle([item, ...wrong]) };
+  });
+  qIndex = 0;
+  correct = 0;
+  locked = false;
+  document.getElementById("restart").hidden = true;
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const score = document.getElementById("score");
+  const box = document.getElementById("choices");
+  if (qIndex >= quiz.length) {
+    document.getElementById("question").textContent = "끝!";
+    box.innerHTML = "";
+    score.textContent = correct + " / " + quiz.length + " 맞혔어요.";
+    document.getElementById("restart").hidden = false;
+    return;
+  }
+  const current = quiz[qIndex];
+  document.getElementById("question").textContent = current.item.ko + " 의 영어는?";
+  score.textContent = (qIndex + 1) + " / " + quiz.length;
+  box.innerHTML = "";
+  locked = false;
+  current.options.forEach((opt) => {
+    const button = document.createElement("button");
+    button.textContent = opt.en;
+    button.onclick = () => {
+      if (locked) return;
+      locked = true;
+      const good = opt.en === current.item.en;
+      button.classList.add(good ? "good" : "bad");
+      if (!good) {
+        [...box.children].find((el) => el.textContent === current.item.en).classList.add("good");
+      } else {
+        correct += 1;
+      }
+      setTimeout(() => {
+        qIndex += 1;
+        renderQuestion();
+      }, 700);
+    };
+    box.appendChild(button);
+  });
+}
+
+document.getElementById("restart").onclick = buildQuiz;
+
+document.getElementById("phraseList").innerHTML = phrases.map(([en, ko]) =>
+  '<div class="phrase"><strong>' + en + '</strong><span>' + ko + '</span></div>'
+).join("");
+
+showCard();
+buildQuiz();
+</script>
+</body>
+</html>
